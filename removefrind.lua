@@ -1,334 +1,231 @@
-local httpService = game:GetService("HttpService")
-local tweenService = game:GetService("TweenService")
-local debrisService = game:GetService("Debris")
-local players = game:GetService("Players")
-local starterGui = game:GetService("StarterGui")
-local coreGui = game:GetService("CoreGui")
+--[[
+    AurexScripts Connection Removal Tool
+    Subscribe: https://YouTube.com/@aurexscripts
+]]
 
-local whitelistEnabled = getgenv().Whitelist or false
-local maxRemoval = math.min(getgenv().MaxRemoval or 9999, 9999)
-local removalSpeed = math.clamp(getgenv().RemovalSpeed or 2.5, 0.5, 10)
+-- Services
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local Debris = game:GetService("Debris")
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AurexWarningUI"
-screenGui.Parent = coreGui
-screenGui.IgnoreGuiInset = true
-screenGui.ResetOnSpawn = false
+local LocalPlayer = Players.LocalPlayer
+local UserId = LocalPlayer.UserId
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 420, 0, 360)
-mainFrame.Position = UDim2.new(0.5, -210, 0.5, -180)
-mainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
+-- Configuration
+local RemovalSpeed = getgenv().RemovalSpeed
+local MaxRemoval = getgenv().MaxRemoval
+local Whitelist = getgenv().Whitelist
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 15)
-corner.Parent = mainFrame
+-- ============================================================================
+-- UI Creation
+-- ============================================================================
 
-local animationContainer = Instance.new("Frame")
-animationContainer.Size = UDim2.new(1, 0, 1, 0)
-animationContainer.BackgroundTransparency = 1
-animationContainer.Parent = mainFrame
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AurexWarningUI"
+ScreenGui.Parent = CoreGui
+ScreenGui.IgnoreGuiInset = true
 
-local PARTICLE_COUNT = 45
-local PARTICLE_LIFESPAN = 3
-local PARTICLE_INTERVAL = 0.2
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 420, 0, 360)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -180)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
 
-local function createParticle(parent, xPosition)
-    local particle = Instance.new("Frame")
-    particle.Size = UDim2.new(0, 2, 0, 2)
-    particle.Position = UDim2.new(xPosition, 0, 1, 0)
-    particle.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
-    particle.BackgroundTransparency = 0.5
-    particle.Parent = parent
-    particle.BorderSizePixel = 0
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 15)
+MainCorner.Parent = MainFrame
+
+local InnerFrame = Instance.new("Frame")
+InnerFrame.Size = UDim2.new(1, 0, 1, 0)
+InnerFrame.BackgroundTransparency = 1
+InnerFrame.Parent = MainFrame
+
+-- Header
+local Header = Instance.new("TextLabel")
+Header.Size = UDim2.new(1, 0, 0, 50)
+Header.Text = "AurexScripts ⚡ Connection Removal"
+Header.TextColor3 = Color3.new(1, 1, 1)
+Header.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Header.Font = Enum.Font.GothamBold
+Header.TextSize = 16
+Header.Parent = MainFrame
+
+-- Warning Title
+local WarningLabel = Instance.new("TextLabel")
+WarningLabel.Size = UDim2.new(1, 0, 0, 40)
+WarningLabel.Position = UDim2.new(0, 0, 0, 60)
+WarningLabel.Text = "⚠️ WARNING!"
+WarningLabel.TextColor3 = Color3.fromRGB(255, 180, 0)
+WarningLabel.Font = Enum.Font.GothamBlack
+WarningLabel.TextSize = 26
+WarningLabel.BackgroundTransparency = 1
+WarningLabel.Parent = MainFrame
+
+-- Description
+local Description = Instance.new("TextLabel")
+Description.Size = UDim2.new(0.9, 0, 0, 100)
+Description.Position = UDim2.new(0.05, 0, 0, 100)
+Description.Text = "This action is permanent. The script will REMOVE your connections. Use at your own risk. Subscribe to AurexScripts!"
+Description.TextColor3 = Color3.fromRGB(180, 180, 180)
+Description.Font = Enum.Font.Gotham
+Description.TextSize = 14
+Description.BackgroundTransparency = 1
+Description.TextWrapped = true
+Description.Parent = MainFrame
+
+-- Info Text
+local InfoLabel = Instance.new("TextLabel")
+InfoLabel.Size = UDim2.new(0.9, 0, 0, 50)
+InfoLabel.Position = UDim2.new(0.05, 0, 0, 220)
+InfoLabel.Text = "Max Removal: " .. tostring(MaxRemoval) .. " | Speed: " .. tostring(RemovalSpeed) .. "s\nWhitelist: Active"
+InfoLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
+InfoLabel.Font = Enum.Font.Code
+InfoLabel.TextSize = 13
+InfoLabel.BackgroundTransparency = 1
+InfoLabel.Parent = MainFrame
+
+-- Cancel Button
+local CancelButton = Instance.new("TextButton")
+CancelButton.Size = UDim2.new(0.42, 0, 0, 45)
+CancelButton.Position = UDim2.new(0.53, 0, 0.82, 0)
+CancelButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+CancelButton.Text = "CANCEL"
+CancelButton.TextColor3 = Color3.new(1, 1, 1)
+CancelButton.Font = Enum.Font.GothamBold
+CancelButton.TextSize = 16
+CancelButton.Parent = MainFrame
+
+local CancelCorner = Instance.new("UICorner")
+CancelCorner.CornerRadius = UDim.new(0, 8)
+CancelCorner.Parent = CancelButton
+
+CancelButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Continue Button
+local ContinueButton = Instance.new("TextButton")
+ContinueButton.Size = UDim2.new(0.42, 0, 0, 45)
+ContinueButton.Position = UDim2.new(0.05, 0, 0.82, 0)
+ContinueButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+ContinueButton.Text = "CONTINUE"
+ContinueButton.TextColor3 = Color3.new(1, 1, 1)
+ContinueButton.Font = Enum.Font.GothamBold
+ContinueButton.TextSize = 16
+ContinueButton.Parent = MainFrame
+
+local ContinueCorner = Instance.new("UICorner")
+ContinueCorner.CornerRadius = UDim.new(0, 8)
+ContinueCorner.Parent = ContinueButton
+
+-- Particle Animation Function
+local function CreateParticle(xPosition)
+    local Particle = Instance.new("Frame")
+    Particle.Size = UDim2.new(0, 2, 0, 2)
+    Particle.Position = UDim2.new(xPosition, 0, 1, 0)
+    Particle.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    Particle.BackgroundTransparency = 0.5
+    Particle.Parent = InnerFrame
     
-    local particleCorner = Instance.new("UICorner")
-    particleCorner.CornerRadius = UDim.new(1, 0)
-    particleCorner.Parent = particle
+    local ParticleCorner = Instance.new("UICorner")
+    ParticleCorner.CornerRadius = UDim.new(1, 0)
+    ParticleCorner.Parent = Particle
     
-    local tweenInfo = TweenInfo.new(PARTICLE_LIFESPAN, Enum.EasingStyle.Linear)
-    local tween = tweenService:Create(particle, tweenInfo, {
+    local TweenInfo = TweenInfo.new(3)
+    local Tween = TweenService:Create(Particle, TweenInfo, {
         BackgroundTransparency = 1,
         Position = UDim2.new(xPosition, 0, -0.1, 0)
     })
-    tween:Play()
+    Tween:Play()
     
-    debrisService:AddItem(particle, PARTICLE_LIFESPAN)
+    Debris:AddItem(Particle, 3)
 end
 
-local particlePositions = {}
-for i = 1, PARTICLE_COUNT do
-    particlePositions[i] = math.random()
-end
-
+-- Spawn particles
 task.spawn(function()
-    for _, pos in ipairs(particlePositions) do
-        if not mainFrame or not mainFrame.Parent then break end
-        createParticle(animationContainer, pos)
-        task.wait(PARTICLE_INTERVAL)
+    local ParticleList = {
+        0.1718112320203329, 0.8187669164853117, 0.39006081841233536, 0.5653648863961899,
+        0.3900395578128934, 0.7444095984028382, 0.418579219888702, 0.30933804278232335,
+        0.8823202657253788, 0.9693081534982658, 0.8714847586642813, 0.5325261917600633,
+        0.7198750817844395, 0.7002456439619688, 0.8672190387173495, 0.37935823350673786,
+        0.6175318169799773, 0.8697889444422835, 0.9901958882186004, 0.8532426053560206,
+        0.5183847505891794, 0.46481192811414085, 0.1737312463370734, 0.41656558831999513,
+        0.6981101977441659, 0.5881346338949682, 0.7111759424973223, 0.8883291964915065,
+        0.6056501958547758, 0.30827696307897756, 0.8172445309609326, 0.5139803348430243,
+        0.2774892340880104, 0.31842014879678726, 0.7294976348328239, 0.6865592618236355,
+        0.40035330317781237, 0.9276495688269951, 0.011990044032384711, 0.14673235924883016,
+        0.8302348010642111, 0.8810010032237279, 0.48055156554595185, 0.5788837887283917,
+        0.019021489573106537
+    }
+    
+    for _, pos in pairs(ParticleList) do
+        if not MainFrame.Parent then
+            break
+        end
+        CreateParticle(pos)
+        task.wait(0.2)
     end
 end)
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 50)
-titleLabel.Text = "AurexScripts ─ Connection Removal"
-titleLabel.TextColor3 = Color3.new(1, 1, 1)
-titleLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextSize = 16
-titleLabel.Parent = mainFrame
-
-local warningLabel = Instance.new("TextLabel")
-warningLabel.Size = UDim2.new(1, 0, 0, 40)
-warningLabel.Position = UDim2.new(0, 0, 0, 60)
-warningLabel.Text = "⚠️ WARNING!"
-warningLabel.TextColor3 = Color3.fromRGB(255, 180, 0)
-warningLabel.Font = Enum.Font.GothamBlack
-warningLabel.TextSize = 26
-warningLabel.BackgroundTransparency = 1
-warningLabel.Parent = mainFrame
-
-local descriptionLabel = Instance.new("TextLabel")
-descriptionLabel.Size = UDim2.new(0.9, 0, 0, 100)
-descriptionLabel.Position = UDim2.new(0.05, 0, 0, 100)
-descriptionLabel.Text = "This action is permanent. The script will REMOVE your every connection [use at own risk.] Subscribe to AurexScripts!"
-descriptionLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-descriptionLabel.Font = Enum.Font.Gotham
-descriptionLabel.TextSize = 14
-descriptionLabel.BackgroundTransparency = 1
-descriptionLabel.TextWrapped = true
-descriptionLabel.Parent = mainFrame
-
-local infoLabel = Instance.new("TextLabel")
-infoLabel.Size = UDim2.new(0.9, 0, 0, 50)
-infoLabel.Position = UDim2.new(0.05, 0, 0, 220)
-
-if whitelistEnabled then
-    infoLabel.Text = "Max Removal: " .. maxRemoval .. " | Speed: " .. removalSpeed .. "s\nWhitelist: Active"
-else
-    infoLabel.Text = "Max Removal: " .. maxRemoval .. " | Speed: " .. removalSpeed .. "s\nWhitelist: Inactive"
-end
-
-infoLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
-infoLabel.Font = Enum.Font.Code
-infoLabel.TextSize = 13
-infoLabel.BackgroundTransparency = 1
-infoLabel.Parent = mainFrame
-
-local cancelButton = Instance.new("TextButton")
-cancelButton.Size = UDim2.new(0.42, 0, 0, 45)
-cancelButton.Position = UDim2.new(0.53, 0, 0.82, 0)
-cancelButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-cancelButton.Text = "CANCEL"
-cancelButton.TextColor3 = Color3.new(1, 1, 1)
-cancelButton.Font = Enum.Font.GothamBold
-cancelButton.TextSize = 16
-cancelButton.Parent = mainFrame
-cancelButton.AutoButtonColor = false
-
-local cancelCorner = Instance.new("UICorner")
-cancelCorner.CornerRadius = UDim.new(0, 8)
-cancelCorner.Parent = cancelButton
-
-cancelButton.MouseButton1Click:Connect(function()
-    if screenGui then screenGui:Destroy() end
-end)
-
-local continueButton = Instance.new("TextButton")
-continueButton.Size = UDim2.new(0.42, 0, 0, 45)
-continueButton.Position = UDim2.new(0.05, 0, 0.82, 0)
-continueButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-continueButton.Text = "CONTINUE"
-continueButton.TextColor3 = Color3.new(1, 1, 1)
-continueButton.Font = Enum.Font.GothamBold
-continueButton.TextSize = 16
-continueButton.Parent = mainFrame
-continueButton.AutoButtonColor = false
-
-local continueCorner = Instance.new("UICorner")
-continueCorner.CornerRadius = UDim.new(0, 8)
-continueCorner.Parent = continueButton
-
-cancelButton.MouseEnter:Connect(function()
-    tweenService:Create(cancelButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(70, 70, 70)}):Play()
-end)
-cancelButton.MouseLeave:Connect(function()
-    tweenService:Create(cancelButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
-end)
-
-continueButton.MouseEnter:Connect(function()
-    tweenService:Create(continueButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 0, 0)}):Play()
-end)
-continueButton.MouseLeave:Connect(function()
-    tweenService:Create(continueButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(180, 0, 0)}):Play()
-end)
-
-local function fetchFriendsWithPagination()
-    local localPlayer = players.LocalPlayer
-    if not localPlayer then return {}, 0 end
+-- Continue Button Action
+ContinueButton.MouseButton1Click:Connect(function()
+    setclipboard("https://YouTube.com/@aurexscripts")
     
-    local userId = localPlayer.UserId
-    local allFriends = {}
-    local cursor = ""
-    local maxRequests = 68
-    local requestCount = 0
+    local Tween = TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Position = UDim2.new(0.5, -210, 1.5, 0)
+    })
+    Tween:Play()
     
-    local totalFriends = 0
-    local success, friendCountResponse = pcall(function()
-        return game:HttpGet("https://friends.roblox.com/v1/users/" .. userId .. "/friends/count", true)
-    end)
+    task.wait(0.5)
+    ScreenGui:Destroy()
     
-    if success and friendCountResponse then
-        local success2, countData = pcall(function()
-            return httpService:JSONDecode(friendCountResponse)
-        end)
-        if success2 and countData then
-            totalFriends = countData.count or 0
-        end
-    end
-    
-    pcall(function()
-        starterGui:SetCore("SendNotification", {
-            Duration = 4,
-            Text = "Found " .. totalFriends .. " actual connections.",
-            Title = "Aurex Script",
-            Icon = "rbxassetid://73335337208359"
-        })
-    end)
-    
-    while requestCount < maxRequests do
-        local url = "https://friends.roblox.com/v1/users/" .. userId .. "/friends?userSort=0&limit=100"
-        if cursor ~= "" and cursor ~= nil then
-            url = url .. "&cursor=" .. cursor
-        end
-        
-        local success, response = pcall(function()
-            return game:HttpGet(url, true)
-        end)
-        
-        if not success or not response then break end
-        
-        local success2, data = pcall(function()
-            return httpService:JSONDecode(response)
-        end)
-        
-        if not success2 or not data or not data.data then break end
-        
-        for _, friend in pairs(data.data) do
-            table.insert(allFriends, friend)
-        end
-        
-        cursor = data.nextPageCursor or ""
-        requestCount = requestCount + 1
-        
-        if cursor == "" then break end
-        if totalFriends > 0 and #allFriends >= totalFriends then break end
-        
-        task.wait(0.1)
-    end
-    
-    return allFriends, totalFriends
-end
-
-local function getCSRFToken()
+    -- Fetch friends count
     local success, response = pcall(function()
-        return game:HttpGet("https://friends.roblox.com/v1/users/1", true)
+        return game:HttpGet("https://friends.roblox.com/v1/users/" .. UserId .. "/friends/count")
     end)
-    if success and response then
-        local headers = syn and syn.crypt or {}
-        return headers
-    end
-    return nil
-end
-
-local removalActive = false
-
-local function removeAllConnections()
-    local localPlayer = players.LocalPlayer
-    if not localPlayer then return end
     
-    local friendsList, totalCount = fetchFriendsWithPagination()
-    
-    local removedCount = 0
-    local whitelist = getgenv().WhitelistList or {}
-    
-    local requestFunc = syn and syn.request or request or http_request
-    if not requestFunc then
+    if success then
+        local Count = HttpService:JSONDecode(response).count
         pcall(function()
-            starterGui:SetCore("SendNotification", {
-                Duration = 5,
-                Text = "No request library found",
-                Title = "Aurex Script - Error",
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Duration = 4,
+                Text = "Found " .. Count .. " connections.",
+                Title = "Aurex Script",
                 Icon = "rbxassetid://73335337208359"
             })
         end)
-        return
+        print("LOG: TOTAL CONNECTIONS: " .. Count)
     end
     
-    for _, friend in pairs(friendsList) do
-        if removedCount >= maxRemoval then break end
+    -- Fetch all friends with pagination
+    local AllFriends = {}
+    local NextCursor = ""
+    local MaxPages = 68
+    
+    for Page = 1, MaxPages do
+        local url = "https://friends.roblox.com/v1/users/" .. UserId .. "/friends?userSort=0"
+        if NextCursor ~= "" and NextCursor ~= nil then
+            url = url .. "&cursor=" .. NextCursor
+        end
         
-        local friendId = friend.id
-        local isWhitelisted = false
+        local success, data = pcall(function()
+            return game:HttpGet(url)
+        end)
         
-        for _, whitelistId in pairs(whitelist) do
-            if whitelistId == friendId then
-                isWhitelisted = true
+        if success then
+            local decoded = HttpService:JSONDecode(data)
+            for _, friend in pairs(decoded.data) do
+                table.insert(AllFriends, friend)
+            end
+            NextCursor = decoded.nextPageCursor
+            if not NextCursor or NextCursor == "" then
                 break
             end
+        else
+            break
         end
-        
-        if not isWhitelisted then
-            local success = pcall(function()
-                requestFunc({
-                    Url = string.format("https://friends.roblox.com/v1/users/%d/friends/%d", localPlayer.UserId, friendId),
-                    Method = "DELETE",
-                    Headers = {
-                        ["Content-Type"] = "application/json"
-                    }
-                })
-            end)
-            
-            if success then
-                removedCount = removedCount + 1
-                task.wait(removalSpeed)
-            end
-        end
-    end
-    
-    pcall(function()
-        starterGui:SetCore("SendNotification", {
-            Duration = 5,
-            Text = string.format("Removed %d/%d connections", removedCount, #friendsList),
-            Title = "Aurex Script - Complete",
-            Icon = "rbxassetid://73335337208359"
-        })
-    end)
-end
-
-continueButton.MouseButton1Click:Connect(function()
-    if removalActive then return end
-    removalActive = true
-    
-    pcall(function()
-        setclipboard("https://YouTube.com/@aurexscripts")
-    end)
-    
-    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-    local tween = tweenService:Create(mainFrame, tweenInfo, {Position = UDim2.new(0.5, -210, 1.5, 0)})
-    tween:Play()
-    tween.Completed:Wait()
-    
-    if screenGui then screenGui:Destroy() end
-    
-    removeAllConnections()
-    removalActive = false
-end)
-
-screenGui.AncestryChanged:Connect(function()
-    if not screenGui.Parent then
-        removalActive = false
     end
 end)
